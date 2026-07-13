@@ -1,0 +1,25 @@
+﻿# NOTICE
+
+This project uses the following third-party open source software.
+
+## Runtime Dependencies
+
+| Project | License | Repository |
+|---------|---------|------------|
+| NoneBot2 | MIT | https://github.com/nonebot/nonebot2 |
+| nonebot-adapter-onebot | MIT | https://github.com/nonebot/adapter-onebot |
+| nonebot-plugin-apscheduler | MIT | https://github.com/nonebot/plugin-apscheduler |
+| httpx | BSD | https://github.com/encode/httpx |
+| Jinja2 | BSD-3-Clause | https://github.com/pallets/jinja |
+| Playwright | Apache-2.0 | https://github.com/microsoft/playwright |
+| Pillow | HPND | https://github.com/python-pillow/Pillow |
+| python-dateutil | Apache-2.0 / BSD | https://github.com/dateutil/dateutil |
+
+## External Services
+
+| Project | License | Repository |
+|---------|---------|------------|
+| FxEmbed | MIT | https://github.com/FxEmbed/FxEmbed |
+
+The copyright of each third-party project belongs to its respective owners.
+This project is not affiliated with, endorsed by, or sponsored by any of the above.

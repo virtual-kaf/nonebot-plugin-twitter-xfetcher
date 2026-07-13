@@ -1,0 +1,136 @@
+﻿{% extends "base.html" %}
+{% block content %}
+
+{# 祖先帖（回复链） #}
+{% for ancestor in ancestors %}
+{% if loop.first %}
+<div class="card-label">↑ replying to</div>
+{% else %}
+<div class="thread-arrow">↑</div>
+{% endif %}
+<div class="tweet-card">
+  <div class="tweet-header">
+    <div class="tweet-avatar">
+      {% if ancestor.author.avatar_url %}<img src="{{ ancestor.author.avatar_url }}" crossorigin="anonymous">{% endif %}
+    </div>
+    <div class="tweet-user">
+      <div class="tweet-name">{{ ancestor.author.name }}</div>
+      <div class="tweet-handle">@{{ ancestor.author.screen_name }}<span class="time">{{ format_time(ancestor.created_at) }}</span></div>
+    </div>
+  </div>
+  <div class="tweet-body">
+    {% if ancestor.text %}
+    <div class="tweet-text">{{ ancestor.text }}</div>
+    {% endif %}
+    {% if ancestor.media %}
+    <div class="tweet-media">
+      <div class="tweet-media-grid cols-{{ [1, 2, 3, 4][ancestor.media|length - 1] if ancestor.media|length <= 4 else 4 }}">
+        {% for m in ancestor.media[:4] %}
+        <img src="{{ m.url }}" loading="lazy" crossorigin="anonymous">
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="tweet-stats">
+      <span>💬 <strong>{{ ancestor.replies }}</strong></span>
+      <span>🔄 <strong>{{ ancestor.retweets }}</strong></span>
+      <span>❤️ <strong>{{ ancestor.likes }}</strong></span>
+      <span>👁 <strong>{{ ancestor.views }}</strong></span>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% if ancestors %}
+<div class="thread-arrow">↳ reply</div>
+{% endif %}
+
+{# 目标推文 #}
+<div class="tweet-card">
+  <div class="tweet-header">
+    <div class="tweet-avatar">
+      {% if target.author.avatar_url %}<img src="{{ target.author.avatar_url }}" crossorigin="anonymous">{% endif %}
+    </div>
+    <div class="tweet-user">
+      <div class="tweet-name">{{ target.author.name }}</div>
+      <div class="tweet-handle">@{{ target.author.screen_name }}<span class="time">{{ format_time(target.created_at) }}</span></div>
+    </div>
+  </div>
+  <div class="tweet-body">
+    {% if target.text %}
+    <div class="tweet-text">{{ target.text }}</div>
+    {% endif %}
+    {% if target.translated_text %}
+    <div class="tweet-translation">{{ target.translated_text }}</div>
+    {% endif %}
+    {% if target.media %}
+    <div class="tweet-media">
+      <div class="tweet-media-grid cols-{{ [1, 2, 3, 4][target.media|length - 1] if target.media|length <= 4 else 4 }}">
+        {% for m in target.media[:4] %}
+        <img src="{{ m.url }}" loading="lazy" crossorigin="anonymous">
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if quote and quote.type != "tombstone" %}
+    <div class="quote-card">
+      <div class="quote-header">
+        <div class="quote-avatar">
+          {% if quote.author.avatar_url %}<img src="{{ quote.author.avatar_url }}" crossorigin="anonymous">{% endif %}
+        </div>
+        <span class="quote-name">{{ quote.author.name }}</span>
+        <span class="quote-handle">@{{ quote.author.screen_name }}</span>
+      </div>
+      {% if quote.text %}
+      <div class="quote-text">{{ quote.text[:300] }}{% if quote.text|length > 300 %}...{% endif %}</div>
+      {% endif %}
+      {% if quote.media %}
+      <div class="quote-media">
+        <img src="{{ quote.media[0].url }}" loading="lazy" crossorigin="anonymous">
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="tweet-stats">
+      <span>💬 <strong>{{ target.replies }}</strong></span>
+      <span>🔄 <strong>{{ target.retweets }}</strong></span>
+      <span>❤️ <strong>{{ target.likes }}</strong></span>
+      <span>👁 <strong>{{ target.views }}</strong></span>
+    </div>
+    <div class="tweet-footer">
+      <a href="{{ target.url }}" target="_blank">查看原文</a>
+    </div>
+  </div>
+</div>
+
+{# 引用帖 #}
+{% if quote and quote.type != "tombstone" and not ancestors %}
+<div class="thread-arrow">↓ quoting</div>
+<div class="tweet-card">
+  <div class="tweet-header">
+    <div class="tweet-avatar">
+      {% if quote.author.avatar_url %}<img src="{{ quote.author.avatar_url }}" crossorigin="anonymous">{% endif %}
+    </div>
+    <div class="tweet-user">
+      <div class="tweet-name">{{ quote.author.name }}</div>
+      <div class="tweet-handle">@{{ quote.author.screen_name }}<span class="time">{{ format_time(quote.created_at) }}</span></div>
+    </div>
+  </div>
+  <div class="tweet-body">
+    {% if quote.text %}
+    <div class="tweet-text">{{ quote.text }}</div>
+    {% endif %}
+    {% if quote.media %}
+    <div class="tweet-media">
+      <div class="tweet-media-grid cols-{{ [1, 2, 3, 4][quote.media|length - 1] if quote.media|length <= 4 else 4 }}">
+        {% for m in quote.media[:4] %}
+        <img src="{{ m.url }}" loading="lazy" crossorigin="anonymous">
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

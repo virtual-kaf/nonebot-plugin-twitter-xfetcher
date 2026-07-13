@@ -1,0 +1,23 @@
+﻿# Runtime data
+data/*.json
+!data/.gitkeep
+
+# Card images
+data/cards/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Test scripts
+xfetch.py
+xfetch.mjs
+# Old V1 plugin
+plugins/

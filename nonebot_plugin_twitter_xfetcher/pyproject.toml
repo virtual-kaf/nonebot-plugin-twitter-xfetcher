@@ -1,0 +1,28 @@
+﻿[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nonebot-plugin-twitter-xfetcher"
+version = "2.0.0"
+description = "NoneBot2 X/Twitter feed monitor — FxEmbed API, DeepSeek translation, tweet card rendering"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "nonebot2>=2.0.0",
+    "nonebot-adapter-onebot>=2.0.0",
+    "nonebot-plugin-apscheduler>=0.4.0",
+    "httpx>=0.24.0",
+    "python-dateutil>=2.8.0",
+    "jinja2>=3.0.0",
+    "playwright>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nonebot_plugin_twitter_xfetcher"]
+
+[tool.nonebot]
+plugins = ["nonebot_plugin_twitter_xfetcher"]
