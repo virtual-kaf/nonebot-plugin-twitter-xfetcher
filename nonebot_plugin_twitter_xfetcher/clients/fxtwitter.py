@@ -5,7 +5,7 @@ from urllib.request import urlopen, Request
 
 from nonebot import logger
 
-from ..config import FXTWITTER_API_BASE, REQUEST_TIMEOUT
+from ..config import plugin_config
 from ..models.tweet import TweetAuthor, TweetConversation, TweetItem, TweetMedia
 
 
@@ -65,9 +65,9 @@ def _parse_tweet(raw: dict) -> TweetItem:
 
 def fetch_conversation(tweet_id: str) -> TweetConversation:
     """Fetch full conversation: status + thread ancestors + replies + quote."""
-    url = f"{FXTWITTER_API_BASE}/2/conversation/{tweet_id}?ranking_mode=likes"
+    url = f"{plugin_config.fxtwitter_api_base}/2/conversation/{tweet_id}?ranking_mode=likes"
     req = Request(url, headers={"User-Agent": "xfetch/2.0"})
-    with urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+    with urlopen(req, timeout=plugin_config.request_timeout) as resp:
         data = json.loads(resp.read())
     if data.get("code") != 200:
         raise RuntimeError(f"FxTwitter API code {data.get('code')}")

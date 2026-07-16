@@ -1,4 +1,4 @@
-﻿# nonebot-plugin-twitter-xfetcher
+# nonebot-plugin-twitter-xfetcher
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![NoneBot2](https://img.shields.io/badge/NoneBot2-2.0%2B-red)](https://v2.nonebot.dev/)
@@ -96,7 +96,7 @@ flowchart TD
 ```
 nonebot_plugin_twitter_xfetcher/
 ├── __init__.py                 # 插件入口
-├── config.py                   # 全部配置项
+├── config.py                   # 配置模型
 ├── commands.py                 # 指令注册与处理
 ├── scheduler.py                # 定时任务
 ├── utils.py                    # 工具函数
@@ -128,46 +128,61 @@ nonebot_plugin_twitter_xfetcher/
 
 ## 快速开始
 
-### 安装
+### 第一步：安装插件
 
 ```bash
 pip install nonebot-plugin-twitter-xfetcher
 ```
 
-> **注意**：首次使用必须安装 Chromium 浏览器内核，否则无法渲染推文卡片：
+> ⚠️ **首次使用必须安装 Chromium 浏览器内核**，否则无法渲染推文卡片：
 >
 > ```bash
 > playwright install chromium
 > ```
 
-### 配置
+### 第二步：配置插件
 
-编辑插件目录下的 `config.py`，填入必要参数：
+打开你 NoneBot2 项目根目录下的 `.env` 文件，把下面这段配置**完整复制粘贴**进去：
 
-```python
-# === 必填 ===
-GROK_API_KEY = "Bearer xxx"          # Grok API 密钥（需兼容接口）
-DEEPSEEK_API_KEY = "sk-xxx"          # DeepSeek API 密钥
-CORE_MEMBERS = ["user_a", "user_b"]  # 核心账号（screen_name）
-IMAGE_PROXY = "http://127.0.0.1:114514"#图片下载地址**如需显示图片必须配置** 
+```dotenv
+# ========== xfetch 插件配置 ==========
 
-# === 推荐 ===
-ADMIN_LIST = ["你的QQ号"]             # 管理员（可使用 update/reset）
-DISPLAY_TZ = "Asia/Shanghai"         # 卡片时间戳显示时区
-MAX_URLS_PER_MEMBER = 3              # 每个成员每次最多获取推文数
-POLL_CRON_MINUTES = "2,32"           # 定时轮询分钟（每小时第 2、32 分）
+# --- 必填：API 密钥（不填插件无法工作）---
+XFETCH_GROK_API_KEY=Bearer 把这里换成你的Grok_API密钥
+XFETCH_DEEPSEEK_API_KEY=sk-把这里换成你的DeepSeek_API密钥
+
+# --- 必填：你要监控的 X/Twitter 账号 ---
+# 核心账号（所有开启了推送的群默认都会收到）
+XFETCH_CORE_MEMBERS='["user_a", "user_b"]'
+# 可选账号（群成员可以自己用指令订阅）
+XFETCH_OPTIONAL_MEMBERS='["user_c", "user_d"]'
+
+# --- 必填：图片下载代理地址（不填无法正常显示图片） ---
+# XFETCH_IMAGE_PROXY=http://127.0.0.1:1234
+
+# --- 以下为可选配置---
+# XFETCH_GROK_API_URL=http://127.0.0.1:8000/v1/chat/completions
+# XFETCH_DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
+# XFETCH_FXTWITTER_API_BASE=https://api.fxtwitter.com
+# XFETCH_DISPLAY_TIMEZONE=Asia/Shanghai
+# XFETCH_POLL_CRON_MINUTES=2,32
+# XFETCH_MAX_URLS_PER_MEMBER=3
+# XFETCH_MAX_POST_AGE_HOURS=6.0
+# XFETCH_REQUEST_TIMEOUT=120.0
+# XFETCH_HISTORY_LIMIT=10
+# XFETCH_COMMAND_NAME=xfetch
 ```
 
-全部配置项见 [配置参考](#配置参考)。
+> 改完 `.env` 后重启 NoneBot2，插件就会自动生效。
 
-### 使用
+### 第三步：开始使用
 
 在已接入 OneBot 的 QQ 群内：
 
 ```
 /xfetch on                    # 开启本群推送
 /xfetch subscribe @user_a     # 订阅可选成员
-/xfetch update                # 管理员手动触发
+/xfetch update                # SUPERUSER 手动触发
 ```
 
 ## 指令
@@ -178,74 +193,66 @@ POLL_CRON_MINUTES = "2,32"           # 定时轮询分钟（每小时第 2、32 
 | `/xfetch subscribe @id` | 所有人 | 订阅可选成员 |
 | `/xfetch unsubscribe @id` | 所有人 | 取消订阅 |
 | `/xfetch waterfilter on \| off` | 所有人 | 水帖过滤（关闭时不推送 reply/quote） |
-| `/xfetch update` | 管理员 | 手动触发获取与推送 |
-| `/xfetch reset` | 管理员 | 清空去重记录 |
+| `/xfetch update` | SUPERUSER | 手动触发获取与推送 |
+| `/xfetch reset` | SUPERUSER | 清空去重记录 |
 
-> 指令名可通过 `COMMAND_NAME` 配置项自定义。
+> 指令名可通过 `XFETCH_COMMAND_NAME` 配置项自定义。例如设为 `twitter` 后指令变为 `/twitter on`。
 
-## 配置参考
+## 完整配置参考（可选）
+
+以下列出全部可配置项及其默认值。如果你需要更精细的控制，按需添加到 `.env` 文件中。
 
 ### API
 
-| 配置项 | 类型 | 说明 |
-|--------|------|------|
-| `GROK_API_URL` | `str` | URL Provider API 地址（兼容接口），默认 `http://127.0.0.1:8000/v1/chat/completions` |
-| `GROK_API_KEY` | `str` | URL Provider API 密钥，格式 `Bearer xxx` |
-| `DEEPSEEK_API_URL` | `str` | DeepSeek API 地址 |
-| `DEEPSEEK_API_KEY` | `str` | DeepSeek API 密钥，格式 `sk-xxx` |
-| `FXTWITTER_API_BASE` | `str` | Conversation Provider API 地址，默认 `https://api.fxtwitter.com` |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_GROK_API_URL` | `str` | `http://127.0.0.1:8000/v1/chat/completions` | Grok API 地址 |
+| `XFETCH_GROK_API_KEY` | `str` | — | Grok API 密钥（必填） |
+| `XFETCH_DEEPSEEK_API_URL` | `str` | `https://api.deepseek.com/chat/completions` | DeepSeek API 地址 |
+| `XFETCH_DEEPSEEK_API_KEY` | `str` | — | DeepSeek API 密钥（必填） |
+| `XFETCH_FXTWITTER_API_BASE` | `str` | `https://api.fxtwitter.com` | 推文数据服务地址 |
 
 ### 账号
 
-| 配置项 | 类型 | 说明 |
-|--------|------|------|
-| `CORE_MEMBERS` | `list[str]` | 核心账号，所有已开启的群默认推送 |
-| `OPTIONAL_MEMBERS` | `list[str]` | 可选账号白名单，群可按需 subscribe |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_CORE_MEMBERS` | `list[str]` | `["user_a", "user_b"]` | 核心账号，所有群默认推送 |
+| `XFETCH_OPTIONAL_MEMBERS` | `list[str]` | `["user_c", "user_d"]` | 可选账号白名单 |
+
 
 ### 时区
 
-| 配置项 | 类型 | 说明 |
-|--------|------|------|
-| `JST` | `ZoneInfo` | 日本时区，内部时间解析用 |
-| `CST` | `ZoneInfo` | 中国标准时间 |
-| `DISPLAY_TZ` | `ZoneInfo` | 卡片时间戳显示时区，默认 `Asia/Shanghai` |
-
-### 路径
-
-| 配置项 | 类型 | 说明 |
-|--------|------|------|
-| `PLUGIN_DIR` | `Path` | 插件目录，自动推导 |
-| `DATA_DIR` | `Path` | 数据目录，默认 `插件目录/data` |
-| `CARD_DIR` | `Path` | 卡片图片缓存目录，默认 `插件目录/data/cards` |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_DISPLAY_TIMEZONE` | `str` | `Asia/Shanghai` | 卡片时间戳显示时区 |
 
 ### 运行参数
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `POLL_CRON_MINUTES` | `str` | `"2,32"` | 定时轮询 cron 分钟表达式 |
-| `MAX_URLS_PER_MEMBER` | `int` | `3` | 每个成员每次最多获取推文数 |
-| `MAX_POST_AGE` | `timedelta` | `6h` | 超过此时长的推文忽略 |
-| `REQUEST_TIMEOUT` | `float` | `120.0` | API 请求超时秒数 |
-| `HISTORY_LIMIT` | `int` | `10` | 每个成员去重记录保留条数 |
-| `IMAGE_PROXY` | `str` | `"http://127.0.0.1:114514"` | 图片兼容代理地址 |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_POLL_CRON_MINUTES` | `str` | `2,32` | 定时轮询分钟（cron 表达式） |
+| `XFETCH_MAX_URLS_PER_MEMBER` | `int` | `3` | 每个成员每次最多获取推文数 |
+| `XFETCH_MAX_POST_AGE_HOURS` | `float` | `6.0` | 超过此时长（小时）的推文忽略 |
+| `XFETCH_REQUEST_TIMEOUT` | `float` | `120.0` | API 请求超时秒数 |
+| `XFETCH_HISTORY_LIMIT` | `int` | `10` | 每个成员的去重记录条数 |
+| `XFETCH_IMAGE_PROXY` | `str` | `http://127.0.0.1:1234` | 图片代理地址 |
+| `XFETCH_GLOBAL_MEMBER_LIMIT` | `int` | `18` | 全局成员数量上限 |
 
 ### 卡片
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `CARD_WIDTH` | `int` | `800` | 卡片宽度（像素） |
-| `CARD_FONT_PATHS` | `list[str]` | 系统字体路径 | 渲染字体，需支持中日文 |
-| `CARD_MAX_AGE_HOURS` | `int` | `24` | 卡片图片保留时长（小时） |
-| `CARD_CLEANUP_CRON_HOUR` | `str` | `"4"` | 卡片清理 cron 小时 |
-| `CARD_CLEANUP_CRON_MINUTE` | `str` | `"0"` | 卡片清理 cron 分钟 |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_CARD_WIDTH` | `int` | `800` | 卡片宽度（像素） |
+| `XFETCH_CARD_FONT_PATHS` | `list[str]` | 系统字体 | 渲染字体路径 |
+| `XFETCH_CARD_MAX_AGE_HOURS` | `int` | `24` | 卡片缓存保留时长（小时） |
+| `XFETCH_CARD_CLEANUP_CRON_HOUR` | `str` | `4` | 卡片清理触发小时 |
+| `XFETCH_CARD_CLEANUP_CRON_MINUTE` | `str` | `0` | 卡片清理触发分钟 |
 
-### 权限与指令
+### 指令
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `ADMIN_LIST` | `list[str]` | `[]` | 管理员 QQ 号列表 |
-| `COMMAND_NAME` | `str` | `"xfetch"` | 指令前缀，修改后所有指令自动适配 |
-| `HELP_MESSAGE` | `str` | 自动生成 | 帮助文本 |
+| `.env` 配置项 | 类型 | 默认值 | 说明 |
+|--------------|------|--------|------|
+| `XFETCH_COMMAND_NAME` | `str` | `xfetch` | 指令前缀 |
 
 ## 数据存储
 
@@ -269,6 +276,7 @@ POLL_CRON_MINUTES = "2,32"           # 定时轮询分钟（每小时第 2、32 
 
 ## 鸣谢
 
+- **[NoneBot2](https://github.com/nonebot/nonebot2)** — 跨平台 Python 异步机器人框架，为本插件提供运行基础。
 - **[chenyme/grok2api](https://github.com/chenyme/grok2api)** — 提供 Grok 兼容接口，用作 URL Provider。版权归原项目所有。
 - **[FxEmbed/FxEmbed](https://github.com/FxEmbed/FxEmbed)** — 提供推文媒体数据服务，用作 Conversation Provider。版权归原项目所有。
 

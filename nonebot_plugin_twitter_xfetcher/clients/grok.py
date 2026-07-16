@@ -5,7 +5,7 @@ from typing import List, Optional
 import httpx
 from nonebot import logger
 
-from ..config import GROK_API_KEY, GROK_API_URL, REQUEST_TIMEOUT, MAX_URLS_PER_MEMBER
+from ..config import plugin_config
 
 
 GROK_URL_SYSTEM_PROMPT = """\
@@ -27,7 +27,7 @@ def _build_grok_prompt(members: List[str]) -> str:
     return f"""Target accounts: {joined}
 
 Search the latest posts for each account. Return ONLY the JSON with post URLs.
-For each account, return up to {MAX_URLS_PER_MEMBER} most recent post URLs."""
+For each account, return up to {plugin_config.max_urls_per_member} most recent post URLs."""
 
 
 async def grok_fetch_urls(members: List[str]) -> List[dict]:
@@ -43,8 +43,8 @@ async def grok_fetch_urls(members: List[str]) -> List[dict]:
         ],
     }
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, trust_env=False) as client:
-        r = await client.post(GROK_API_URL, headers={"Authorization": GROK_API_KEY}, json=payload)
+    async with httpx.AsyncClient(timeout=plugin_config.request_timeout, trust_env=False) as client:
+        r = await client.post(plugin_config.grok_api_url, headers={"Authorization": plugin_config.grok_api_key}, json=payload)
         if r.status_code != 200:
             logger.error(f"Grok HTTP {r.status_code}: {r.text[:300]}")
             return []

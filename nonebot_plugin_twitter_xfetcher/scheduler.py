@@ -6,14 +6,13 @@ from nonebot import get_bot, logger
 from nonebot_plugin_apscheduler import scheduler
 
 from .config import (
-    POLL_CRON_MINUTES, CARD_MAX_AGE_HOURS, CARD_DIR,
-    CARD_CLEANUP_CRON_HOUR, CARD_CLEANUP_CRON_MINUTE,
+    CARD_DIR, plugin_config,
 )
 from .services import get_all_members, broadcast_to_groups
 from .core import run_tweet_pipeline
 
 
-@scheduler.scheduled_job("cron", minute=POLL_CRON_MINUTES, id="xfetch_monitor")
+@scheduler.scheduled_job("cron", minute=plugin_config.poll_cron_minutes, id="xfetch_monitor")
 async def check_xfetch():
     """Poll X feeds."""
     try:
@@ -30,13 +29,13 @@ async def check_xfetch():
         logger.error(f"[Scheduler] check failed: {e}", exc_info=True)
 
 
-@scheduler.scheduled_job("cron", hour=CARD_CLEANUP_CRON_HOUR, minute=CARD_CLEANUP_CRON_MINUTE, id="xfetch_card_cleanup")
+@scheduler.scheduled_job("cron", hour=plugin_config.card_cleanup_cron_hour, minute=plugin_config.card_cleanup_cron_minute, id="xfetch_card_cleanup")
 async def cleanup_cards():
     """清理过期卡片图片。"""
     if not CARD_DIR.exists():
         return
 
-    cutoff = time.time() - CARD_MAX_AGE_HOURS * 3600
+    cutoff = time.time() - plugin_config.card_max_age_hours * 3600
     cleaned = 0
     for f in CARD_DIR.iterdir():
         if f.is_file() and f.suffix == ".png":
@@ -48,4 +47,4 @@ async def cleanup_cards():
                     pass
 
     if cleaned:
-        logger.info(f"[CardCleanup] 清理了 {cleaned} 张过期卡片（>{CARD_MAX_AGE_HOURS}h）")
+        logger.info(f"[CardCleanup] 清理了 {cleaned} 张过期卡片（>{plugin_config.card_max_age_hours}h）")

@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 from nonebot import logger
 
-from ..config import DATA_DIR, HISTORY_LIMIT
+from ..config import DATA_DIR, plugin_config
 from ..models.group import GroupConfig
 
 
@@ -41,8 +41,8 @@ def mark_sent(member: str, tweet_id: str):
     ids = status.setdefault(member, [])
     if tweet_id not in ids:
         ids.append(tweet_id)
-    if len(ids) > HISTORY_LIMIT:
-        status[member] = ids[-HISTORY_LIMIT:]
+    if len(ids) > plugin_config.history_limit:
+        status[member] = ids[-plugin_config.history_limit:]
     _save_json(STATUS_FILE, status)
 
 

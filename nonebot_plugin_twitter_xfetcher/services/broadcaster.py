@@ -4,7 +4,7 @@ from typing import List
 from nonebot import logger
 from nonebot.adapters.onebot.v11 import Bot
 
-from ..config import CORE_MEMBERS
+from ..config import plugin_config
 from ..models.tweet import TweetConversation, TweetItem
 from ..storage import get_all_group_configs
 from ..renderer import render_conversation_card
@@ -51,7 +51,7 @@ async def broadcast_to_groups(bot: Bot, conversations: List[TweetConversation]):
             if not group_cfg or not group_cfg.master_on:
                 continue
 
-            if not ((member_handle in CORE_MEMBERS and member_handle not in group_cfg.unsubs)
+            if not ((member_handle in plugin_config.core_members and member_handle not in group_cfg.unsubs)
                     or member_handle in group_cfg.subs):
                 continue
 

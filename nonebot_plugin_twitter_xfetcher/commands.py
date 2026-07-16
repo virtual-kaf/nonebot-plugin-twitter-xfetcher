@@ -1,24 +1,26 @@
-﻿from datetime import datetime, timedelta, timezone
+﻿import re
+import asyncio
+from datetime import datetime, timedelta, timezone
 
-from nonebot import logger, on_command
+from nonebot import logger, on_command, on_message
 from nonebot.adapters.onebot.v11 import Bot, Event, GroupMessageEvent, Message
 from nonebot.params import CommandArg
+from nonebot.permission import SUPERUSER
+from nonebot.rule import to_me
 
-from .config import CST, OPTIONAL_MEMBERS, COMMAND_NAME, HELP_MESSAGE, ADMIN_LIST
+from .config import CST, HELP_MESSAGE, plugin_config
 from .services import get_all_members, subscribe, unsubscribe, broadcast_to_groups
 from .core import run_tweet_pipeline
+from .core.tweet_pipeline import _parse_tweet_id
+from .clients.fxtwitter import fetch_conversation
+from .clients.deepseek import translate_batch
+from .renderer import render_conversation_card
 from .storage import get_group_config, save_group_config, STATUS_FILE
-
-
-def _check_admin(event: Event) -> bool:
-    """检查发送者是否在 ADMIN_LIST 中。列表为空则无人是管理员。"""
-    user_id = str(getattr(event, "user_id", ""))
-    return user_id in ADMIN_LIST
 
 
 # ===== 主开关 =====
 
-master_cmd = on_command(COMMAND_NAME, aliases={f"/{COMMAND_NAME}"}, priority=1, block=True)
+master_cmd = on_command(plugin_config.command_name, aliases={f"/{plugin_config.command_name}"}, priority=1, block=True)
 
 
 @master_cmd.handle()
@@ -41,8 +43,8 @@ async def handle_master(bot: Bot, event: GroupMessageEvent, args: Message = Comm
 
 # ===== 订阅 =====
 
-sub_cmd = on_command(f"{COMMAND_NAME} subscribe",
-                     aliases={f"/{COMMAND_NAME} subscribe", f"{COMMAND_NAME} 订阅", "订阅"},
+sub_cmd = on_command(f"{plugin_config.command_name} subscribe",
+                     aliases={f"/{plugin_config.command_name} subscribe", f"{plugin_config.command_name} 订阅", "订阅"},
                      priority=1, block=True)
 
 
@@ -50,16 +52,16 @@ sub_cmd = on_command(f"{COMMAND_NAME} subscribe",
 async def handle_sub(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     target = args.extract_plain_text().strip().lstrip("@")
     if not target:
-        allowed = "、".join(OPTIONAL_MEMBERS)
-        await sub_cmd.finish(f"请提供要订阅的 ID，例如：/{COMMAND_NAME} subscribe @id\n可选：{allowed}")
+        allowed = "、".join(plugin_config.optional_members)
+        await sub_cmd.finish(f"请提供要订阅的 ID，例如：/{plugin_config.command_name} subscribe @id\n可选：{allowed}")
     msg = subscribe(str(event.group_id), target)
     await sub_cmd.finish(msg)
 
 
 # ===== 取消订阅 =====
 
-unsub_cmd = on_command(f"{COMMAND_NAME} unsubscribe",
-                       aliases={f"/{COMMAND_NAME} unsubscribe", f"{COMMAND_NAME} 取消订阅", "取消订阅"},
+unsub_cmd = on_command(f"{plugin_config.command_name} unsubscribe",
+                       aliases={f"/{plugin_config.command_name} unsubscribe", f"{plugin_config.command_name} 取消订阅", "取消订阅"},
                        priority=1, block=True)
 
 
@@ -74,8 +76,8 @@ async def handle_unsub(bot: Bot, event: GroupMessageEvent, args: Message = Comma
 
 # ===== 水帖过滤 =====
 
-waterfilter_cmd = on_command(f"{COMMAND_NAME} waterfilter",
-                             aliases={f"/{COMMAND_NAME} waterfilter", f"{COMMAND_NAME} 水帖过滤"},
+waterfilter_cmd = on_command(f"{plugin_config.command_name} waterfilter",
+                             aliases={f"/{plugin_config.command_name} waterfilter", f"{plugin_config.command_name} 水帖过滤"},
                              priority=1, block=True)
 
 
@@ -95,28 +97,26 @@ async def handle_waterfilter(bot: Bot, event: GroupMessageEvent, args: Message =
         await waterfilter_cmd.finish("水帖过滤已关闭")
     else:
         await waterfilter_cmd.finish(
-            f"用法：/{COMMAND_NAME} waterfilter on | off\n"
+            f"用法：/{plugin_config.command_name} waterfilter on | off\n"
             f"当前状态：{'开启' if cfg.filter_water else '关闭'}"
         )
 
 
-# ===== 手动更新（管理员） =====
+# ===== 手动更新（SUPERUSER） =====
 
-update_cmd = on_command(f"{COMMAND_NAME} update",
-                        aliases={f"/{COMMAND_NAME} update", "updatex", "/updatex"},
+update_cmd = on_command(f"{plugin_config.command_name} update",
+                        aliases={f"/{plugin_config.command_name} update", "updatex", "/updatex"},
+                        permission=SUPERUSER,
                         priority=1, block=True)
 
 
 @update_cmd.handle()
 async def handle_update(bot: Bot, event: Event):
-    if not _check_admin(event):
-        await update_cmd.finish("权限不足，仅管理员可用")
-
     gid = getattr(event, "group_id", None)
     if gid:
         cfg = get_group_config(str(gid))
         if not cfg.master_on:
-            await update_cmd.finish(f"本群未开启 xfetch，请先使用 /{COMMAND_NAME} on")
+            await update_cmd.finish(f"本群未开启 xfetch，请先使用 /{plugin_config.command_name} on")
 
     try:
         members = get_all_members()
@@ -132,21 +132,19 @@ async def handle_update(bot: Bot, event: Event):
         await update_cmd.finish(f"更新失败")
 
 
-# ===== 清空去重（管理员） =====
+# ===== 清空去重（SUPERUSER） =====
 
-reset_cmd = on_command(f"{COMMAND_NAME} reset",
-                       aliases={f"/{COMMAND_NAME} reset"},
+reset_cmd = on_command(f"{plugin_config.command_name} reset",
+                       aliases={f"/{plugin_config.command_name} reset"},
+                       permission=SUPERUSER,
                        priority=1, block=True)
 
 
 @reset_cmd.handle()
 async def handle_reset(bot: Bot, event: Event):
-    if not _check_admin(event):
-        await reset_cmd.finish("权限不足，仅管理员可用")
-
     try:
         STATUS_FILE.write_text("{}", encoding="utf-8")
-        await reset_cmd.finish(f"已清空去重记录，下次 /{COMMAND_NAME} update 会重新推送所有推文")
+        await reset_cmd.finish(f"已清空去重记录，下次 /{plugin_config.command_name} update 会重新推送所有推文")
     except Exception as e:
         logger.error(f"清空失败：{e}")
         await reset_cmd.finish(f"清空失败")

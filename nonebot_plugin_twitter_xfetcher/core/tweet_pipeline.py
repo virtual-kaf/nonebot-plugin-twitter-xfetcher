@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 
 from nonebot import logger
 
-from ..config import CORE_MEMBERS, MAX_POST_AGE
+from ..config import MAX_POST_AGE, plugin_config
 from ..models.tweet import TweetConversation, TweetItem
 from ..clients.fxtwitter import fetch_conversation
 from ..clients.grok import grok_fetch_urls

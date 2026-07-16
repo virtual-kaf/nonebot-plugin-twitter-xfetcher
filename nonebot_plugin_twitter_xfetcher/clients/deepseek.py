@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 import httpx
 from nonebot import logger
 
-from ..config import DEEPSEEK_API_KEY, DEEPSEEK_API_URL, REQUEST_TIMEOUT
+from ..config import plugin_config
 
 TRANSLATE_SYSTEM_PROMPT = """\
 You are a professional to-Chinese translator for X/Twitter posts.
@@ -40,8 +40,8 @@ async def _chat(client: httpx.AsyncClient, system: str, user: str) -> str:
         ],
     }
     r = await client.post(
-        DEEPSEEK_API_URL,
-        headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+        plugin_config.deepseek_api_url,
+        headers={"Authorization": f"Bearer {plugin_config.deepseek_api_key}"},
         json=payload,
     )
     if r.status_code != 200:
@@ -55,7 +55,7 @@ async def translate_batch(texts: list[tuple[str, str]]) -> dict[str, str]:
     items = [{"id": tid, "text": t} for tid, t in texts]
     user_prompt = "Translate:\n" + json.dumps(items, ensure_ascii=False)
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=plugin_config.request_timeout, trust_env=False) as client:
         raw = await _chat(client, TRANSLATE_SYSTEM_PROMPT, user_prompt)
         try:
             data = json.loads(raw)
